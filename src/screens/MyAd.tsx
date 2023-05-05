@@ -1,5 +1,5 @@
 import { TouchableOpacity } from 'react-native'
-import { Box, HStack, Heading, Icon, Select, Text, VStack } from 'native-base'
+import { Box, FlatList, HStack, Heading, Icon, Select, Text, VStack } from 'native-base'
 
 import { useNavigation } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
@@ -8,7 +8,11 @@ import { MaterialIcons } from '@expo/vector-icons'
 
 import { MyAdCard } from '@components/MyAdCard'
 
+import { useAuth } from '@hooks/useAuth'
+
 export function MyAd() {
+  const { userProducts } = useAuth()
+
   const navigation = useNavigation<AppNavigatorRoutesProps>()
 
   function handleNewAd() {
@@ -32,7 +36,7 @@ export function MyAd() {
 
       <HStack justifyContent="space-between" alignItems="center" mt={8} mb={5}>
         <Text color="gray.200" fontFamily="regular" fontSize="md">
-          9 anúncios
+          {userProducts.length} anúncios
         </Text>
         <Select
           minW={27}
@@ -56,12 +60,19 @@ export function MyAd() {
         </Select>
       </HStack>
 
-      <Box flexWrap="wrap" flexDirection="row" justifyContent="space-around">
-        <MyAdCard active={false} isNew={true} onPress={handleMyAdDetails} />
+      <FlatList
+        data={userProducts}
+        keyExtractor={(item, index) => item}
+        renderItem={({ item }) => (
+          <MyAdCard active={item.isActive} isNew={item.isNew} onPress={handleMyAdDetails} />
+        )}
+      />
+      {/* <Box flexWrap="wrap" flexDirection="row" justifyContent="space-around">
+        
         <MyAdCard active={true} isNew={false} onPress={handleMyAdDetails} />
         <MyAdCard active={true} isNew={false} onPress={handleMyAdDetails} />
         <MyAdCard active={false} isNew={true} onPress={handleMyAdDetails} />
-      </Box>
+      </Box> */}
     </VStack>
   )
 }

@@ -7,7 +7,8 @@ import { theme } from './src/theme'
 
 import { Loading } from '@components/Loading'
 import { Routes } from '@routes/index'
-// import { EditAd } from '@screens/EditAd'
+
+import { AuthContextProvider } from '@contexts/AuthContext'
 
 export default function App() {
   const [fontsLoaded] = useFonts({ Karla_400Regular, Karla_700Bold })
@@ -15,7 +16,7 @@ export default function App() {
   return (
     <NativeBaseProvider theme={theme}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      {fontsLoaded ? <Routes /> : <Loading />}
+      <AuthContextProvider>{fontsLoaded ? <Routes /> : <Loading />}</AuthContextProvider>
     </NativeBaseProvider>
   )
 }

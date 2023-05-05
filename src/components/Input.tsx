@@ -14,6 +14,7 @@ export function Input({ errorMessage = null, isInvalid, ...rest }: Props) {
         h={12}
         px={4}
         borderWidth={0}
+        autoCapitalize="none"
         placeholderTextColor="gray.400"
         fontSize="md"
         color="gray.200"

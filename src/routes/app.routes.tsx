@@ -11,6 +11,8 @@ import { MyAdDetails } from '@screens/MyAdDetails'
 import { PreviewAd } from '@screens/PreviewAd'
 import { Logout } from '@screens/Logout'
 
+import { useAuth } from '@hooks/useAuth'
+
 import HomeSvg from '@assets/home.svg'
 import TagSvg from '@assets/tag.svg'
 import SignOutSvg from '@assets/signout.svg'
@@ -31,6 +33,7 @@ export type AppNavigatorRoutesProps = BottomTabNavigationProp<AppRoutesProps>
 const { Navigator, Screen } = createBottomTabNavigator<AppRoutesProps>()
 
 export function AppRoutes() {
+  const { signOut } = useAuth()
   const { sizes, colors } = useTheme()
 
   const iconSize = sizes[6]
@@ -74,7 +77,7 @@ export function AppRoutes() {
           tabBarIcon: () => <SignOutSvg fill={colors.red[500]} width={iconSize} height={iconSize} />,
         }}
         listeners={() => ({
-          tabPress: () => console.log('ze da manga'),
+          tabPress: async () => await signOut(),
         })}
       />
 

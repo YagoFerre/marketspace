@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import { useState } from 'react'
-import { Center, Heading, IconButton, ScrollView, Text, VStack, useToast } from 'native-base'
+import { Center, Heading, IconButton, ScrollView, Skeleton, Text, VStack, useToast } from 'native-base'
 
 import { useNavigation } from '@react-navigation/native'
 
@@ -14,13 +14,16 @@ import { Input } from '@components/Input'
 import { InputPassword } from '@components/InputPassword'
 import { Button } from '@components/Button'
 
+import { api } from '@services/api'
+import { AppError } from '@utils/AppError'
+
 import { Controller, useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import * as yup from 'yup'
 
+import * as yup from 'yup'
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system'
-import { api } from '@services/api'
+import { useAuth } from '@hooks/useAuth'
 
 interface FormDataProps {
   name: string
@@ -42,43 +45,67 @@ const signUpSchema = yup.object({
 })
 
 export function SignUp() {
+  const [userPhoto, setUserPhoto] = useState<any>()
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [isPhotoLoading, setIsPhotoLoading] = useState(false)
+
+  const { signIn } = useAuth()
+
   const {
     control,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<FormDataProps>({
     resolver: yupResolver(signUpSchema),
   })
 
-  const [userPhoto, setUserPhoto] = useState<any>()
-
   const navigation = useNavigation()
   const toast = useToast()
 
-  const userName = watch('name')
-
   async function handleSignUp({ name, email, tel, password }: FormDataProps) {
     try {
+      setIsSignUp(true)
+
       const data = new FormData()
       data.append('name', name)
       data.append('email', email)
       data.append('tel', tel)
       data.append('password', password)
-      data.append('avatar', userPhoto)
 
-      await api.post('/users', data, {
+      const fileExtension = userPhoto.uri.split('.').pop()
+
+      const photoFile = {
+        name: `${name}.${fileExtension}`.toLowerCase(),
+        uri: userPhoto.uri,
+        type: `${userPhoto.type}/${fileExtension}`,
+      } as any
+
+      data.append('avatar', photoFile)
+
+      await api.post('/users/', data, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       })
-    } catch (error: any) {
-      console.log(error)
+
+      await signIn(email, password)
+    } catch (error) {
+      setIsSignUp(false)
+      const isAppError = error instanceof AppError
+      const title = isAppError ? error.message : 'Não foi possível criar a conta. Tente novamente mais tarde.'
+
+      toast.show({
+        title,
+        placement: 'top',
+        bgColor: 'red.500',
+      })
     }
   }
 
   async function handleSelectImage() {
     try {
+      setIsPhotoLoading(true)
+
       const imageSelected = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -101,26 +128,12 @@ export function SignUp() {
           })
         }
 
-        const fileExtension = imageSelected.assets[0].uri.split('.').pop()
-
-        if (userName === undefined) {
-          return toast.show({
-            title: 'Preencha o formulário antes.',
-            placement: 'top',
-            bgColor: 'red.500',
-          })
-        }
-
-        const photoFile = {
-          name: `${userName}.${fileExtension}`.replaceAll(' ', '').toLowerCase(),
-          uri: imageSelected.assets[0].uri,
-          type: `${imageSelected.assets[0].type}/${fileExtension}`,
-        } as any
-
-        setUserPhoto(photoFile)
+        setUserPhoto(imageSelected.assets[0])
       }
     } catch (error: any) {
-      console.log(error)
+      throw new Error(error)
+    } finally {
+      setIsPhotoLoading(false)
     }
   }
 
@@ -143,7 +156,12 @@ export function SignUp() {
         </Center>
 
         <Center mx={12}>
-          <UserPhoto size={24} source={userPhoto ? { uri: userPhoto } : DefaultUserPhoto} />
+          {isPhotoLoading ? (
+            <Skeleton w={24} h={24} rounded="full" startColor="gray.500" endColor="gray.400" />
+          ) : (
+            <UserPhoto size={24} source={!userPhoto ? DefaultUserPhoto : { uri: userPhoto.uri }} />
+          )}
+
           <IconButton
             onPress={handleSelectImage}
             mt={-8}
@@ -177,6 +195,7 @@ export function SignUp() {
             render={({ field: { onChange, value } }) => (
               <Input
                 placeholder="E-mail"
+                keyboardType="email-address"
                 onChangeText={onChange}
                 value={value}
                 errorMessage={errors.email?.message}
@@ -232,6 +251,7 @@ export function SignUp() {
             bg="gray.100"
             title="Criar"
             onPress={handleSubmit(handleSignUp)}
+            isLoading={isSignUp}
           />
         </Center>
 
