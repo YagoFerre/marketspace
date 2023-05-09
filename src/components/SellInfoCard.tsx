@@ -2,13 +2,9 @@ import { HStack, Heading, IPressableProps, Icon, Pressable, Text, VStack } from 
 
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 
-import { useAuth } from '@hooks/useAuth'
-
 interface Props extends IPressableProps {}
 
 export function SellInfoCard({ ...rest }: Props) {
-  const { userProducts } = useAuth()
-
   return (
     <Pressable
       bg={'blue.light:alpha.10'}
@@ -24,7 +20,7 @@ export function SellInfoCard({ ...rest }: Props) {
       <Icon as={MaterialIcons} name="local-offer" color="blue.normal" opacity={100} size={6} />
       <VStack ml={4} flex={1}>
         <Heading color="gray.200" fontFamily="bold">
-          {userProducts.length}
+          0
         </Heading>
         <Text color="gray.200" fontFamily="regular">
           anúncios ativos

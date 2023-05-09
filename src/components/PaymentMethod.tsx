@@ -10,7 +10,8 @@ const icons: { [key: string]: string } = {
   boleto: 'barcode-outline',
   pix: 'qr-code-outline',
   card: 'card-outline',
-  deposit: 'cash-outline',
+  deposit: 'wallet-outline',
+  cash: 'cash-outline',
 }
 
 export function PaymentMethod({ methods }: Props) {

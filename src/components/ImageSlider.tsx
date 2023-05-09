@@ -9,15 +9,10 @@ interface ItemsChangedProps {
 
 interface Props {
   active?: boolean
+  productImages: any[]
 }
 
-export function ImageSlider({ active }: Props) {
-  const [photos, setPhotos] = useState([
-    'https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885_960_720.jpg',
-    'https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885_960_720.jpg',
-    'https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885_960_720.jpg',
-  ])
-
+export function ImageSlider({ productImages, active = true }: Props) {
   const [imageIndex, setImageIndex] = useState(0)
   const indexChanged = useRef((info: ItemsChangedProps) => {
     setImageIndex(info.viewableItems[0].index!)
@@ -29,9 +24,11 @@ export function ImageSlider({ active }: Props) {
     <VStack>
       <FlatList
         contentContainerStyle={{}}
-        data={photos}
+        data={productImages}
         keyExtractor={(item, index) => item + index}
-        renderItem={({ item }) => <Image alt="Imagem do produto" source={{ uri: item }} w={width} h={72} />}
+        renderItem={({ item }) => (
+          <Image alt="Imagem do produto" source={item} w={width} h={width / 1} resizeMode="contain" />
+        )}
         showsHorizontalScrollIndicator={false}
         horizontal
         pagingEnabled
@@ -39,7 +36,7 @@ export function ImageSlider({ active }: Props) {
       />
 
       <HStack px={1} position="absolute" bottom={1} ml={1}>
-        {photos.map((_, index) => (
+        {productImages.map((_, index) => (
           <Box
             mr={4}
             key={index}

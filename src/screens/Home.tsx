@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Box, Divider, IconButton, Text, VStack } from 'native-base'
 
 import { useNavigation } from '@react-navigation/native'
@@ -11,11 +11,25 @@ import { SellInfoCard } from '@components/SellInfoCard'
 import { Modal } from '@components/Modal'
 import { Input } from '@components/Input'
 import { MyAdCard } from '@components/MyAdCard'
+import { api } from '@services/api'
+import { AdCards } from '@components/AdCards'
 
 export function Home() {
   const [modalIsVisible, setModalIsVisible] = useState(false)
 
   const navigation = useNavigation<AppNavigatorRoutesProps>()
+
+  async function fetchProducts() {
+    try {
+      const { data } = await api.get('/products', {
+        params: {
+          is_new: true,
+        },
+      })
+    } catch (error: any) {
+      throw new Error(error)
+    }
+  }
 
   function handleMyAd() {
     navigation.navigate('MyAd')
@@ -24,6 +38,10 @@ export function Home() {
   function handleAdDetails() {
     navigation.navigate('AdDetails')
   }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
   return (
     <VStack flex={1} bg="gray.600" py={8} px={6}>
@@ -76,10 +94,10 @@ export function Home() {
       <Modal isOpen={modalIsVisible} onClose={() => setModalIsVisible(!modalIsVisible)} />
 
       <Box flexWrap="wrap" flexDirection="row" justifyContent="space-around" mt={5}>
-        <MyAdCard active={false} isNew={true} onPress={handleAdDetails} />
-        <MyAdCard active={true} isNew={false} onPress={handleAdDetails} />
-        <MyAdCard active={true} isNew={false} onPress={handleAdDetails} />
-        <MyAdCard active={false} isNew={true} onPress={handleAdDetails} />
+        {/* <AdCards active={false} isNew={true} onPress={handleAdDetails} />
+        <AdCards active={true} isNew={false} onPress={handleAdDetails} />
+        <AdCards active={true} isNew={false} onPress={handleAdDetails} />
+        <AdCards active={false} isNew={true} onPress={handleAdDetails} /> */}
       </Box>
     </VStack>
   )

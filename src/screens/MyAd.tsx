@@ -1,27 +1,47 @@
+/* eslint-disable camelcase */
+import { useCallback, useState } from 'react'
 import { TouchableOpacity } from 'react-native'
-import { Box, FlatList, HStack, Heading, Icon, Select, Text, VStack } from 'native-base'
+import { FlatList, HStack, Heading, Icon, Select, Text, VStack } from 'native-base'
 
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import { MaterialIcons } from '@expo/vector-icons'
 
 import { MyAdCard } from '@components/MyAdCard'
 
-import { useAuth } from '@hooks/useAuth'
+import { api } from '@services/api'
+
+import { ProductDetailsDTO } from '@dtos/ProductDetailsDTO'
 
 export function MyAd() {
-  const { userProducts } = useAuth()
+  const [myAd, setMyAd] = useState<ProductDetailsDTO[]>([])
 
   const navigation = useNavigation<AppNavigatorRoutesProps>()
+
+  async function fetchMyAd() {
+    try {
+      const { data } = await api.get('/users/products')
+      console.log(data)
+      setMyAd(data)
+    } catch (error: any) {
+      throw new Error(error)
+    }
+  }
 
   function handleNewAd() {
     navigation.navigate('CreateAd')
   }
 
-  function handleMyAdDetails() {
-    navigation.navigate('MyAdDetails')
+  function handleMyAdDetails(product_id: string) {
+    navigation.navigate('MyAdDetails', { product_id })
   }
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyAd()
+    }, []),
+  )
 
   return (
     <VStack px={6} bg="gray.600" flex={1}>
@@ -36,7 +56,7 @@ export function MyAd() {
 
       <HStack justifyContent="space-between" alignItems="center" mt={8} mb={5}>
         <Text color="gray.200" fontFamily="regular" fontSize="md">
-          {userProducts.length} anúncios
+          {myAd.length} anúncios
         </Text>
         <Select
           minW={27}
@@ -61,18 +81,10 @@ export function MyAd() {
       </HStack>
 
       <FlatList
-        data={userProducts}
-        keyExtractor={(item, index) => item}
-        renderItem={({ item }) => (
-          <MyAdCard active={item.isActive} isNew={item.isNew} onPress={handleMyAdDetails} />
-        )}
+        data={myAd}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <MyAdCard data={item} onPress={() => handleMyAdDetails(item.id)} />}
       />
-      {/* <Box flexWrap="wrap" flexDirection="row" justifyContent="space-around">
-        
-        <MyAdCard active={true} isNew={false} onPress={handleMyAdDetails} />
-        <MyAdCard active={true} isNew={false} onPress={handleMyAdDetails} />
-        <MyAdCard active={false} isNew={true} onPress={handleMyAdDetails} />
-      </Box> */}
     </VStack>
   )
 }

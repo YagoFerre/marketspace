@@ -1,5 +1,9 @@
 import { Box, HStack, Heading, IPressableProps, Image, Pressable, Text } from 'native-base'
 
+import { UserPhoto } from './UserPhoto'
+
+import userPhotoDefault from '@assets/userPhotoDefault.png'
+
 import { ProductDetailsDTO } from '@dtos/ProductDetailsDTO'
 
 import { api } from '@services/api'
@@ -8,7 +12,7 @@ interface Props extends IPressableProps {
   data: ProductDetailsDTO
 }
 
-export function MyAdCard({ data, ...rest }: Props) {
+export function AdCards({ data, ...rest }: Props) {
   const priceFormatted = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(data.price / 100)
 
   return (
@@ -21,7 +25,15 @@ export function MyAdCard({ data, ...rest }: Props) {
           w={33}
           h={27}
         />
-
+        <UserPhoto
+          size={6}
+          source={userPhotoDefault}
+          borderColor="gray.700"
+          borderWidth={1}
+          position="absolute"
+          left={1}
+          top={1}
+        />
         <Box
           px={2}
           bg={data.is_new ? 'blue.normal' : 'gray.200'}
@@ -34,22 +46,6 @@ export function MyAdCard({ data, ...rest }: Props) {
             {data.is_new ? 'novo' : 'usado'}
           </Text>
         </Box>
-
-        {!data.is_active && (
-          <Box rounded="md" w={33} h={27} position="absolute" bg="gray.100:alpha.40">
-            <Text
-              position="absolute"
-              bottom={1}
-              left={2}
-              textTransform="uppercase"
-              fontFamily="bold"
-              fontSize="xs"
-              color="gray.700"
-            >
-              anúncio desativado
-            </Text>
-          </Box>
-        )}
       </HStack>
 
       <Text color={data.is_active ? 'gray.200' : 'gray.400'} fontFamily="regular" fontSize="md" mt={1}>

@@ -13,6 +13,8 @@ import { Logout } from '@screens/Logout'
 
 import { useAuth } from '@hooks/useAuth'
 
+import { ProductDTO } from '@dtos/ProductDTO'
+
 import HomeSvg from '@assets/home.svg'
 import TagSvg from '@assets/tag.svg'
 import SignOutSvg from '@assets/signout.svg'
@@ -23,8 +25,8 @@ type AppRoutesProps = {
   EditAd: undefined
   MyAd: undefined
   AdDetails: undefined
-  MyAdDetails: undefined
-  PreviewAd: undefined
+  MyAdDetails: { product_id: string }
+  PreviewAd: { product: ProductDTO; images: any[] }
   Logout: undefined
 }
 
@@ -50,9 +52,6 @@ export function AppRoutes() {
           borderTopWidth: 0,
           height: Platform.OS === 'android' ? 'auto' : 65,
         },
-        // tabBarItemStyle: {
-        //   justifyContent: 'center',
-        // },
       }}
     >
       <Screen

@@ -1,6 +1,8 @@
+/* eslint-disable no-unneeded-ternary */
+/* eslint-disable camelcase */
 import { Box, Center, HStack, Heading, ScrollView, Text, VStack } from 'native-base'
 
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import DefaultUserPhoto from '@assets/userPhotoDefault.png'
@@ -10,13 +12,62 @@ import { UserPhoto } from '@components/UserPhoto'
 import { PaymentMethod } from '@components/PaymentMethod'
 import { Button } from '@components/Button'
 
+import { api } from '@services/api'
+
+import { ProductDTO } from '@dtos/ProductDTO'
+import { useAuth } from '@hooks/useAuth'
+
+interface RouteParamsProps {
+  product: ProductDTO
+  images: any[]
+}
+
 export function PreviewAd() {
-  const m = ['boleto', 'pix', 'card', 'deposit']
+  const { user } = useAuth()
+
+  const route = useRoute()
+  const { product, images } = route.params as RouteParamsProps
 
   const navigation = useNavigation<AppNavigatorRoutesProps>()
 
-  function handlePostAd() {
-    navigation.navigate('MyAdDetails')
+  const productPreview = {
+    ...product,
+    price: Number(product.price) * 100,
+    is_new: product.is_new === 'true' ? true : false,
+  }
+
+  const priceFormatted = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(
+    productPreview.price / 100,
+  )
+
+  async function handlePublishProduct() {
+    try {
+      const { data } = await api.post('/products', {
+        name: productPreview.name,
+        description: productPreview.description,
+        is_new: productPreview.is_new,
+        accept_trade: productPreview.accept_trade,
+        payment_methods: productPreview.payment_methods,
+        price: productPreview.price / 100,
+      })
+
+      const dataForm = new FormData()
+      dataForm.append('product_id', data.id)
+      dataForm.append('images', images[0])
+      dataForm.append('images', images[1])
+      dataForm.append('images', images[2])
+
+      await api.post('/products/images', dataForm, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      console.log(dataForm)
+      navigation.navigate('MyAdDetails', { product_id: data.id })
+    } catch (error: any) {
+      throw new Error(error)
+    }
   }
 
   function handleBack() {
@@ -34,12 +85,15 @@ export function PreviewAd() {
             É assim que seu produto vai aparecer!
           </Text>
         </Center>
-        <ImageSlider />
+        <ImageSlider productImages={images} />
 
         <HStack px={6} pt={5}>
-          <UserPhoto source={DefaultUserPhoto} size={6} />
+          <UserPhoto
+            source={user.avatar ? { uri: `${api.defaults.baseURL}/images/${user.avatar}` } : DefaultUserPhoto}
+            size={6}
+          />
           <Text color="gray.100" fontFamily="regular" fontSize="md" ml={2}>
-            Yago Ferreira
+            {user.name}
           </Text>
         </HStack>
 
@@ -51,25 +105,24 @@ export function PreviewAd() {
             textAlign="center"
             textTransform="uppercase"
           >
-            novo
+            {productPreview.is_new === true ? 'novo' : 'usado'}
           </Text>
         </Box>
 
         <VStack px={6} mt={2}>
           <HStack justifyContent="space-between">
             <Heading fontFamily="bold" fontSize="xl">
-              Luminária pendente
+              {productPreview.name}
             </Heading>
             <Heading color="blue.light" fontFamily="bold" fontSize="xl">
               <Text color="blue.light" fontFamily="bold" fontSize="md">
                 R$
               </Text>{' '}
-              45,00
+              {priceFormatted}
             </Heading>
           </HStack>
           <Text mt={2} fontFamily="regular" fontSize="md" color="gray.200">
-            Cras congue cursus in tortor sagittis placerat nunc, tellus arcu. Vitae ante leo eget maecenas
-            urna mattis cursus.
+            {productPreview.description}
           </Text>
         </VStack>
 
@@ -78,7 +131,7 @@ export function PreviewAd() {
             Aceita troca?
           </Heading>
           <Text fontFamily="regular" fontSize="sm" color="gray.200" ml={2}>
-            Não
+            {productPreview.accept_trade === true ? 'Sim' : 'Não'}
           </Text>
         </HStack>
 
@@ -87,8 +140,8 @@ export function PreviewAd() {
             Meios de pagamento:
           </Heading>
 
-          {m.map((m, index) => (
-            <PaymentMethod key={m} methods={m} />
+          {productPreview.payment_methods.map((method, index) => (
+            <PaymentMethod key={method} methods={method} />
           ))}
         </VStack>
 
@@ -100,7 +153,7 @@ export function PreviewAd() {
             bg="blue.light"
             title="Publicar"
             w={40}
-            onPress={handlePostAd}
+            onPress={handlePublishProduct}
           />
         </HStack>
       </ScrollView>
