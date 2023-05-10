@@ -1,4 +1,6 @@
-import { useState } from 'react'
+/* eslint-disable camelcase */
+/* eslint-disable no-unneeded-ternary */
+import { useCallback, useState } from 'react'
 import { Switch, TouchableOpacity } from 'react-native'
 import {
   Center,
@@ -9,31 +11,178 @@ import {
   Radio,
   ScrollView,
   Text,
-  TextArea,
   VStack,
+  useToast,
 } from 'native-base'
 
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import { MaterialIcons } from '@expo/vector-icons'
+
 import { Input } from '@components/Input'
 import { CheckedGroup } from '@components/CheckedGroup'
 import { Button } from '@components/Button'
+import { TextArea } from '@components/TextArea'
+import { ImageProduct } from '@components/ImageProduct'
+
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+
+import { useAuth } from '@hooks/useAuth'
+import { ProductDTO } from '@dtos/ProductDTO'
+
+import * as yup from 'yup'
+import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
+
+import { AppError } from '@utils/AppError'
+import { api } from '@services/api'
+
+interface A {
+  name: string
+  description: string
+  is_new: string
+  price: string
+  accept_trade: boolean
+  is_active: boolean
+  payment_methods: string[]
+  product_images: {
+    id: string
+    path: string
+  }[]
+}
+
+// interface B {
+//   product_images: {
+//     id: string
+//     path: string
+//   }[]
+// }
+
+interface RouteParamsProps {
+  product_id: string
+}
+
+const newAdSchema = yup.object({
+  name: yup.string().required('Informe o nome do produto.'),
+  description: yup.string().required('Informe a descrição do produto.'),
+  is_new: yup.string().required('Informe se aceita troca ou não.'),
+  price: yup.string().required('O preço é obrigatório.'),
+  accept_trade: yup.boolean().required('Informe se aceita troca ou não.'),
+  payment_methods: yup.array(yup.string()).min(1, 'Informe ao menos um método de pagamento.'),
+})
 
 export function EditAd() {
-  const [isChecked, setIsChecked] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<string[]>([])
+  const { user } = useAuth()
 
+  const [product, setProduct] = useState<ProductDTO>({} as ProductDTO)
+  const [productImages, setProductImages] = useState<any[]>([])
+
+  const route = useRoute()
+  const toast = useToast()
   const navigation = useNavigation<AppNavigatorRoutesProps>()
 
-  function handleEditAd() {
-    navigation.navigate('MyAd')
+  const { product_id } = route.params as RouteParamsProps
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<A>({
+    resolver: yupResolver(newAdSchema),
+  })
+
+  async function loadProduct() {
+    try {
+      const { data } = await api.get(`/products/${product_id}`)
+      const dataFormatted = {
+        ...data,
+        is_new: String(data.is_new),
+        price: String(data.price),
+      }
+
+      setProduct(dataFormatted)
+      setProductImages(data.product_images)
+    } catch (error) {
+      const isAppError = error instanceof AppError
+      const title = isAppError ? error.message : 'Não foi carregar seus anúncios. Tente novamente mais tarde.'
+
+      toast.show({
+        title,
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    }
+  }
+
+  async function handleSelectProductImages() {
+    try {
+      const imageSelected = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 4],
+        quality: 1,
+      })
+
+      if (imageSelected.canceled) {
+        return
+      }
+
+      if (imageSelected.assets[0].uri) {
+        const imageInfo = await FileSystem.getInfoAsync(imageSelected.assets[0].uri, { size: true })
+
+        if (imageInfo.exists && imageInfo.size / 1024 / 1024 > 5) {
+          return toast.show({
+            title: 'Essa imagem é muito grande. Escolha uma de até 5MB.',
+            placement: 'top',
+            bgColor: 'red.500',
+          })
+        }
+
+        const fileExtension = imageSelected.assets[0].uri.split('.').pop()
+
+        const photoFile = {
+          name: `${user.name}.${fileExtension}`.toLowerCase(),
+          uri: imageSelected.assets[0].uri,
+          type: `${imageSelected.assets[0].type}/${fileExtension}`,
+        } as any
+
+        if (photoFile.length < 2) {
+          return toast.show({
+            title: 'Selecione no mínimo 2 imagens.',
+            placement: 'top',
+            bgColor: 'red.500',
+          })
+        }
+
+        setProductImages((prevState) => [...prevState, photoFile])
+      }
+    } catch (error: any) {
+      throw new Error(error)
+    }
+  }
+
+  function handlePreviewAd(product: ProductDTO) {
+    const images = productImages
+
+    navigation.navigate('PreviewAd', { product, images })
+  }
+
+  function handleRemoveProductImage(path: string) {
+    const imageDeleted: any = productImages.filter((image) => image.path !== path)
+    setProductImages(imageDeleted)
   }
 
   function handleBack() {
-    navigation.navigate('MyAdDetails')
+    navigation.goBack()
   }
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProduct()
+    }, [product_id]),
+  )
 
   return (
     <VStack pt={9} bg="gray.600" flex={1}>
@@ -57,109 +206,150 @@ export function EditAd() {
             Escolha até 3 imagens para mostrar o quanto o seu produto é incrível!
           </Text>
 
-          <HStack justifyContent="space-between">
-            <IconButton
-              size={27}
-              rounded="md"
-              _icon={{
-                as: MaterialIcons,
-                name: 'add',
-                color: 'gray.400',
-                size: 6,
-              }}
-              bg="gray.500"
-            />
+          <HStack space={7}>
+            {productImages.map((image, index) => (
+              <ImageProduct
+                key={index}
+                source={{ uri: image.uri || `${api.defaults.baseURL}/images/${image.path}` }}
+                onRemove={() => handleRemoveProductImage(image.path)}
+              />
+            ))}
 
-            <IconButton
-              size={27}
-              rounded="md"
-              _icon={{
-                as: MaterialIcons,
-                name: 'add',
-                color: 'gray.400',
-                size: 6,
-              }}
-              bg="gray.500"
-            />
-
-            <IconButton
-              size={27}
-              rounded="md"
-              _icon={{
-                as: MaterialIcons,
-                name: 'add',
-                color: 'gray.400',
-                size: 6,
-              }}
-              bg="gray.500"
-            />
+            {productImages.length <= 2 && (
+              <IconButton
+                onPress={handleSelectProductImages}
+                size={27}
+                rounded="md"
+                _icon={{
+                  as: MaterialIcons,
+                  name: 'add',
+                  color: 'gray.400',
+                  size: 6,
+                }}
+                bg="gray.500"
+              />
+            )}
           </HStack>
 
           <Heading fontFamily="bold" color="gray.200" fontSize="md" mt={8}>
             Sobre o produto
           </Heading>
 
-          <Input placeholder="Título do anúncio" mt={4} />
-          <TextArea
-            bg="gray.700"
-            numberOfLines={5}
-            h={40}
-            p={4}
-            borderWidth={0}
-            placeholder="Descrição do produto"
-            placeholderTextColor="gray.400"
-            fontSize="md"
-            color="gray.200"
-            fontFamily="regular"
-            mb={4}
-            _focus={{
-              borderWidth: 1,
-              borderColor: 'gray.300',
-              bg: 'gray.700',
-            }}
-            autoCompleteType={undefined}
+          <Controller
+            name="name"
+            control={control}
+            render={({ field: { onChange, value } }) => (
+              <Input
+                placeholder="Título do anúncio"
+                mt={4}
+                onChangeText={onChange}
+                value={value}
+                defaultValue={product.name}
+                errorMessage={errors.name?.message}
+              />
+            )}
           />
 
-          <Radio.Group name="isNew">
-            <HStack space={4} mt={2}>
-              <Radio value="isNew" bg="transparent" colorScheme="blue" size="sm">
-                Produto novo
-              </Radio>
-              <Radio value="isNotNew" bg="transparent" colorScheme="blue" size="sm">
-                Produto usado
-              </Radio>
-            </HStack>
-          </Radio.Group>
+          <Controller
+            name="description"
+            control={control}
+            render={({ field: { onChange, value } }) => (
+              <TextArea
+                onChangeText={onChange}
+                value={value}
+                defaultValue={product.description}
+                errorMessage={errors.description?.message}
+              />
+            )}
+          />
+
+          <Controller
+            name="is_new"
+            control={control}
+            rules={{ required: true }}
+            render={({ field: { onChange, value } }) => (
+              <Radio.Group name="is_new" onChange={onChange} value={value}>
+                <HStack space={4} mt={2}>
+                  <Radio value="true" bg="transparent" colorScheme="blue" size="sm">
+                    Produto novo
+                  </Radio>
+                  <Radio value="false" bg="transparent" colorScheme="blue" size="sm">
+                    Produto usado
+                  </Radio>
+                </HStack>
+              </Radio.Group>
+            )}
+          />
+          {errors?.is_new && (
+            <Text color="red.500" fontSize="sm">
+              {errors.is_new.message}
+            </Text>
+          )}
 
           <Heading fontFamily="bold" color="gray.200" fontSize="md" mt={8} mb={4}>
             Venda
           </Heading>
-          <Input
-            placeholder="Valor do produto"
-            InputLeftElement={
-              <Text ml={4} fontSize="lg" fontFamily="regular">
-                R$
-              </Text>
-            }
+          <Controller
+            name="price"
+            control={control}
+            render={({ field: { onChange, value } }) => (
+              <Input
+                onChangeText={onChange}
+                value={value}
+                defaultValue={product.price}
+                keyboardType="numeric"
+                placeholder="Valor do produto"
+                InputLeftElement={
+                  <Text ml={4} fontSize="lg" fontFamily="regular">
+                    R$
+                  </Text>
+                }
+                errorMessage={errors.price?.message}
+              />
+            )}
           />
 
           <Heading fontFamily="bold" color="gray.200" fontSize="md" mb={2}>
             Aceita troca?
           </Heading>
-          <Switch
-            trackColor={{ true: '#647ac7', false: '' }}
-            value={isChecked}
-            onValueChange={() => setIsChecked(!isChecked)}
+
+          <Controller
+            name="accept_trade"
+            control={control}
+            render={({ field: { onChange, value } }) => (
+              <Switch
+                trackColor={{ true: '#647ac7', false: '' }}
+                value={value}
+                onValueChange={() => onChange(!value)}
+              />
+            )}
           />
 
           <Heading fontFamily="bold" color="gray.200" fontSize="md" mt={4}>
             Meios de pagamento aceitos
           </Heading>
-          <CheckedGroup value={paymentMethod} defaultValue={paymentMethod} onChange={setPaymentMethod} />
+
+          <Controller
+            name="payment_methods"
+            control={control}
+            rules={{ required: true }}
+            render={({ field: { onChange, value } }) => <CheckedGroup value={value} onChange={onChange} />}
+          />
+          {errors?.payment_methods && (
+            <Text color="red.500" fontSize="sm">
+              {errors.payment_methods.message}
+            </Text>
+          )}
         </VStack>
         <HStack py={5} px={6} mt={5} bg="gray.700" justifyContent="space-between" alignItems="center">
           <Button title="Cancelar" w={36} onPress={handleBack} />
-          <Button variant="tertiary" bg="gray.100" title="Avançar" w={36} onPress={handleEditAd} />
+          <Button
+            variant="tertiary"
+            bg="gray.100"
+            title="Avançar"
+            w={36}
+            onPress={handleSubmit(handlePreviewAd)}
+          />
         </HStack>
       </ScrollView>
     </VStack>

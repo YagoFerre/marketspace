@@ -105,7 +105,6 @@ export function CreateAd() {
         }
 
         setProductImages((prevState) => [...prevState, photoFile])
-        console.log(productImages)
       }
     } catch (error: any) {
       throw new Error(error)
@@ -119,7 +118,7 @@ export function CreateAd() {
   }
 
   function handleRemoveProductImage(uri: string) {
-    const imageDeleted = productImages.filter((image) => image.uri !== uri)
+    const imageDeleted: any = productImages.filter((image) => image.uri !== uri)
     setProductImages(imageDeleted)
   }
 

@@ -7,7 +7,6 @@ import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import DefaultUserPhoto from '@assets/userPhotoDefault.png'
 
-import { ImageSlider } from '@components/ImageSlider'
 import { UserPhoto } from '@components/UserPhoto'
 import { PaymentMethod } from '@components/PaymentMethod'
 import { Button } from '@components/Button'
@@ -16,6 +15,7 @@ import { api } from '@services/api'
 
 import { ProductDTO } from '@dtos/ProductDTO'
 import { useAuth } from '@hooks/useAuth'
+import { ImageSliderPreview } from '@components/ImageSliderPreview'
 
 interface RouteParamsProps {
   product: ProductDTO
@@ -48,7 +48,7 @@ export function PreviewAd() {
         is_new: productPreview.is_new,
         accept_trade: productPreview.accept_trade,
         payment_methods: productPreview.payment_methods,
-        price: productPreview.price / 100,
+        price: productPreview.price,
       })
 
       const dataForm = new FormData()
@@ -85,7 +85,7 @@ export function PreviewAd() {
             É assim que seu produto vai aparecer!
           </Text>
         </Center>
-        <ImageSlider productImages={images} />
+        <ImageSliderPreview productImages={images} />
 
         <HStack px={6} pt={5}>
           <UserPhoto

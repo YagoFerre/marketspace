@@ -25,7 +25,7 @@ export function HomeHeader() {
       const isAppError = error instanceof AppError
       const title = isAppError
         ? error.message
-        : 'Não foi carregar os dados do usuário. Tente novamente mais tarde.'
+        : 'Não foi possível carregar os dados do usuário. Tente novamente mais tarde.'
 
       toast.show({
         title,

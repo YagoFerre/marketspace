@@ -1,8 +1,7 @@
 /* eslint-disable camelcase */
 import { useRef, useState } from 'react'
 import { Dimensions, FlatList, ViewToken } from 'react-native'
-import { Box, HStack, Image, VStack, Text } from 'native-base'
-import { api } from '@services/api'
+import { Box, HStack, Image, VStack } from 'native-base'
 
 interface ItemsChangedProps {
   viewableItems: ViewToken[]
@@ -10,14 +9,10 @@ interface ItemsChangedProps {
 }
 
 interface Props {
-  is_active?: boolean
-  productImages: {
-    id: string
-    path: string
-  }[]
+  productImages: any[]
 }
 
-export function ImageSlider({ productImages, is_active }: Props) {
+export function ImageSliderPreview({ productImages }: Props) {
   const [imageIndex, setImageIndex] = useState(0)
   const indexChanged = useRef((info: ItemsChangedProps) => {
     setImageIndex(info.viewableItems[0].index!)
@@ -29,11 +24,11 @@ export function ImageSlider({ productImages, is_active }: Props) {
     <VStack>
       <FlatList
         data={productImages}
-        keyExtractor={(item, index) => item.id}
+        keyExtractor={(item, index) => item + index}
         renderItem={({ item }) => (
           <Image
             alt="Imagem do produto"
-            source={{ uri: `${api.defaults.baseURL}/images/${item.path}` }}
+            source={{ uri: item.uri }}
             w={width}
             h={width / 1}
             resizeMode="contain"
@@ -57,14 +52,6 @@ export function ImageSlider({ productImages, is_active }: Props) {
           />
         ))}
       </HStack>
-
-      {!is_active && (
-        <Box w={width} h={width / 1} bg="gray.100:alpha.60" position="absolute">
-          <Text textTransform="uppercase" color="gray.700" fontFamily="bold" m="auto" fontSize="sm">
-            anúncio desativado
-          </Text>
-        </Box>
-      )}
     </VStack>
   )
 }

@@ -22,7 +22,7 @@ import SignOutSvg from '@assets/signout.svg'
 type AppRoutesProps = {
   Home: undefined
   CreateAd: undefined
-  EditAd: undefined
+  EditAd: { product_id: string }
   MyAd: undefined
   AdDetails: undefined
   MyAdDetails: { product_id: string }
