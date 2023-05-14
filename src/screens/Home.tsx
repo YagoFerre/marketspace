@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { Box, Divider, IconButton, Text, VStack } from 'native-base'
+/* eslint-disable camelcase */
+import { useCallback, useState } from 'react'
+import { Divider, FlatList, IconButton, Text, VStack } from 'native-base'
 
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import { MaterialIcons } from '@expo/vector-icons'
@@ -10,11 +11,18 @@ import { HomeHeader } from '@components/HomeHeader'
 import { SellInfoCard } from '@components/SellInfoCard'
 import { Modal } from '@components/Modal'
 import { Input } from '@components/Input'
-import { MyAdCard } from '@components/MyAdCard'
-import { api } from '@services/api'
 import { AdCards } from '@components/AdCards'
 
+import { ProductDetailsDTO } from '@dtos/ProductDetailsDTO'
+import { api } from '@services/api'
+
 export function Home() {
+  const [products, setProducts] = useState<ProductDetailsDTO[]>([])
+  const [acceptTrade, setAcceptTrade] = useState<boolean | undefined>(undefined)
+  const [isNew, setIsNew] = useState<boolean | undefined>(undefined)
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([])
+  const [query, setQuery] = useState<string>('')
+
   const [modalIsVisible, setModalIsVisible] = useState(false)
 
   const navigation = useNavigation<AppNavigatorRoutesProps>()
@@ -23,9 +31,14 @@ export function Home() {
     try {
       const { data } = await api.get('/products', {
         params: {
-          is_new: true,
+          is_new: isNew,
+          accept_trade: acceptTrade,
+          payment_methods: paymentMethods,
+          query,
         },
       })
+
+      setProducts(data)
     } catch (error: any) {
       throw new Error(error)
     }
@@ -35,13 +48,15 @@ export function Home() {
     navigation.navigate('MyAd')
   }
 
-  function handleAdDetails() {
-    navigation.navigate('AdDetails')
+  function handleAdDetails(product_id: string) {
+    navigation.navigate('AdDetails', { product_id })
   }
 
-  useEffect(() => {
-    fetchProducts()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      fetchProducts()
+    }, [acceptTrade, isNew, paymentMethods, query]),
+  )
 
   return (
     <VStack flex={1} bg="gray.600" py={8} px={6}>
@@ -60,6 +75,8 @@ export function Home() {
       <Input
         rounded="md"
         placeholder="Buscar anúncio"
+        value={query}
+        onChangeText={setQuery}
         InputRightElement={
           <>
             <IconButton
@@ -91,14 +108,29 @@ export function Home() {
           </>
         }
       />
-      <Modal isOpen={modalIsVisible} onClose={() => setModalIsVisible(!modalIsVisible)} />
+      <Modal
+        isOpen={modalIsVisible}
+        onClose={() => setModalIsVisible(!modalIsVisible)}
+        isNew={isNew}
+        acceptTrade={acceptTrade}
+        paymentMethods={paymentMethods}
+        onAcceptTradeChange={setAcceptTrade}
+        onIsNewChange={setIsNew}
+        onPaymentMethodsChange={setPaymentMethods}
+      />
 
-      <Box flexWrap="wrap" flexDirection="row" justifyContent="space-around" mt={5}>
-        {/* <AdCards active={false} isNew={true} onPress={handleAdDetails} />
-        <AdCards active={true} isNew={false} onPress={handleAdDetails} />
-        <AdCards active={true} isNew={false} onPress={handleAdDetails} />
-        <AdCards active={false} isNew={true} onPress={handleAdDetails} /> */}
-      </Box>
+      <FlatList
+        data={products}
+        numColumns={2}
+        columnWrapperStyle={{ justifyContent: 'space-between' }}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <AdCards data={item} onPress={() => handleAdDetails(item.id)} />}
+        ListEmptyComponent={
+          <Text color="gray.200" fontFamily="bold" fontSize="sm" textAlign="center" mt="1/2">
+            Nenhum anúncio disponível.
+          </Text>
+        }
+      />
     </VStack>
   )
 }

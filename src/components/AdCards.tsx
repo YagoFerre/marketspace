@@ -27,7 +27,11 @@ export function AdCards({ data, ...rest }: Props) {
         />
         <UserPhoto
           size={6}
-          source={userPhotoDefault}
+          source={
+            data.user.avatar
+              ? { uri: `${api.defaults.baseURL}/images/${data.user.avatar}` }
+              : userPhotoDefault
+          }
           borderColor="gray.700"
           borderWidth={1}
           position="absolute"
@@ -48,11 +52,11 @@ export function AdCards({ data, ...rest }: Props) {
         </Box>
       </HStack>
 
-      <Text color={data.is_active ? 'gray.200' : 'gray.400'} fontFamily="regular" fontSize="md" mt={1}>
+      <Text color="gray.200" fontFamily="regular" fontSize="md" mt={1}>
         {data.name}
       </Text>
-      <Heading color={data.is_active ? 'gray.100' : 'gray.400'} fontFamily="bold" fontSize="lg">
-        <Text color={data.is_active ? 'gray.100' : 'gray.400'} fontFamily="bold" fontSize="md">
+      <Heading color="gray.100" fontFamily="bold" fontSize="lg">
+        <Text color="gray.100" fontFamily="bold" fontSize="md">
           R$
         </Text>{' '}
         {priceFormatted}

@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { Dimensions, FlatList, ViewToken } from 'react-native'
 import { Box, HStack, Image, VStack, Text } from 'native-base'
+
 import { api } from '@services/api'
 
 interface ItemsChangedProps {
@@ -45,14 +46,13 @@ export function ImageSlider({ productImages, is_active }: Props) {
         onViewableItemsChanged={indexChanged.current}
       />
 
-      <HStack px={1} position="absolute" bottom={1} ml={1}>
+      <HStack bottom={2} space={2} justifyContent="center">
         {productImages?.map((_, index) => (
           <Box
-            mr={4}
             key={index}
             bg={imageIndex === index ? 'gray.700:alpha.75' : 'gray.700:alpha.50'}
             rounded="full"
-            w={29}
+            w={width / 1.07 / productImages.length}
             h={1}
           />
         ))}

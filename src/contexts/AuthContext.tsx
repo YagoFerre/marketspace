@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { ReactNode, createContext, useEffect, useState } from 'react'
 
 import { UserDTO } from '@dtos/UserDTO'
@@ -27,14 +28,21 @@ export function AuthContextProvider({ children }: AuthContextDataProviderProps) 
     setUser(userData)
   }
 
+  async function storageUserAndTokenData(userData: UserDTO, token: string, refresh_token: string) {
+    try {
+      await storageUserSave(userData)
+      await storageUserTokenSave(token, refresh_token)
+    } catch (error: any) {
+      throw new Error(error)
+    }
+  }
+
   async function signIn(email: string, password: string) {
     try {
       const { data } = await api.post('/sessions', { email, password })
-      console.log(data)
 
-      if (data.user && data.token) {
-        await storageUserSave(data.user)
-        await storageUserTokenSave(data.token)
+      if (data.user && data.token && data.refresh_token) {
+        await storageUserAndTokenData(data.user, data.token, data.refresh_token)
 
         updateUserAndToken(data.user, data.token)
       }
@@ -57,7 +65,7 @@ export function AuthContextProvider({ children }: AuthContextDataProviderProps) 
   async function loadUserData() {
     try {
       const userLogged = await storageUserGet()
-      const token = await storageUserTokenGet()
+      const { token } = await storageUserTokenGet()
 
       if (userLogged && token) {
         updateUserAndToken(userLogged, token)
@@ -70,6 +78,14 @@ export function AuthContextProvider({ children }: AuthContextDataProviderProps) 
   useEffect(() => {
     loadUserData()
   }, [])
+
+  useEffect(() => {
+    const subscribe = api.registerInterceptTokenManager(signOut)
+
+    return () => {
+      subscribe()
+    }
+  }, [signOut])
 
   return <AuthContext.Provider value={{ user, signIn, signOut }}>{children}</AuthContext.Provider>
 }

@@ -131,6 +131,29 @@ export function MyAdDetails() {
     }
   }
 
+  async function handleDeleteProduct() {
+    try {
+      await api.delete(`/products/${product_id}`)
+
+      toast.show({
+        title: 'O anúncio foi excluído com sucesso.',
+        placement: 'top',
+        bgColor: 'green.500',
+      })
+
+      navigation.navigate('MyAd')
+    } catch (error) {
+      const isAppError = error instanceof AppError
+      const title = isAppError ? error.message : 'Não foi excluir o anúncio. Tente novamente mais tarde.'
+
+      toast.show({
+        title,
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    }
+  }
+
   function handleBack() {
     navigation.navigate('MyAd')
   }
@@ -231,7 +254,7 @@ export function MyAdDetails() {
               title={product.is_active ? 'Desativar anúncio' : 'Reativar anúncio'}
               onPress={handleChangeIsActiveAd}
             />
-            <Button iconName="delete-outline" title="Excluir anúncio" mt={2} />
+            <Button iconName="delete-outline" title="Excluir anúncio" mt={2} onPress={handleDeleteProduct} />
           </VStack>
         </ScrollView>
       )}

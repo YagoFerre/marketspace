@@ -1,21 +1,23 @@
 /* eslint-disable no-unneeded-ternary */
 /* eslint-disable camelcase */
-import { Box, Center, HStack, Heading, ScrollView, Text, VStack } from 'native-base'
+import { useState } from 'react'
+import { Box, Center, HStack, Heading, ScrollView, Text, VStack, useToast } from 'native-base'
 
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import DefaultUserPhoto from '@assets/userPhotoDefault.png'
 
+import { Button } from '@components/Button'
 import { UserPhoto } from '@components/UserPhoto'
 import { PaymentMethod } from '@components/PaymentMethod'
-import { Button } from '@components/Button'
+import { ImageSliderPreview } from '@components/ImageSliderPreview'
 
 import { api } from '@services/api'
 
 import { ProductDTO } from '@dtos/ProductDTO'
 import { useAuth } from '@hooks/useAuth'
-import { ImageSliderPreview } from '@components/ImageSliderPreview'
+import { AppError } from '@utils/AppError'
 
 interface RouteParamsProps {
   product: ProductDTO
@@ -24,11 +26,13 @@ interface RouteParamsProps {
 
 export function PreviewAd() {
   const { user } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const toast = useToast()
   const route = useRoute()
-  const { product, images } = route.params as RouteParamsProps
-
   const navigation = useNavigation<AppNavigatorRoutesProps>()
+
+  const { product, images } = route.params as RouteParamsProps
 
   const productPreview = {
     ...product,
@@ -42,6 +46,7 @@ export function PreviewAd() {
 
   async function handlePublishProduct() {
     try {
+      setIsSubmitting(true)
       const { data } = await api.post('/products', {
         name: productPreview.name,
         description: productPreview.description,
@@ -53,9 +58,9 @@ export function PreviewAd() {
 
       const dataForm = new FormData()
       dataForm.append('product_id', data.id)
-      dataForm.append('images', images[0])
-      dataForm.append('images', images[1])
-      dataForm.append('images', images[2])
+      images.map((image) => {
+        return dataForm.append('images', image)
+      })
 
       await api.post('/products/images', dataForm, {
         headers: {
@@ -63,10 +68,19 @@ export function PreviewAd() {
         },
       })
 
-      console.log(dataForm)
       navigation.navigate('MyAdDetails', { product_id: data.id })
-    } catch (error: any) {
-      throw new Error(error)
+    } catch (error) {
+      setIsSubmitting(false)
+      const isAppError = error instanceof AppError
+      const title = isAppError ? error.message : 'Não foi excluir o anúncio. Tente novamente mais tarde.'
+
+      toast.show({
+        title,
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -154,6 +168,7 @@ export function PreviewAd() {
             title="Publicar"
             w={40}
             onPress={handlePublishProduct}
+            isLoading={isSubmitting}
           />
         </HStack>
       </ScrollView>

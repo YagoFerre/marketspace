@@ -1,5 +1,5 @@
 /* eslint-disable no-unneeded-ternary */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Switch, TouchableOpacity } from 'react-native'
 import {
   Center,
@@ -48,6 +48,7 @@ export function CreateAd() {
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<ProductDTO>({
     resolver: yupResolver(newAdSchema),
@@ -125,6 +126,11 @@ export function CreateAd() {
   function handleBack() {
     navigation.goBack()
   }
+
+  useEffect(() => {
+    reset()
+    setProductImages([])
+  }, [])
 
   return (
     <VStack pt={9} bg="gray.600" flex={1}>

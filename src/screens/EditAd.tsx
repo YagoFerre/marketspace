@@ -1,6 +1,7 @@
+/* eslint-disable no-prototype-builtins */
 /* eslint-disable camelcase */
 /* eslint-disable no-unneeded-ternary */
-import { useCallback, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Switch, TouchableOpacity } from 'react-native'
 import {
   Center,
@@ -15,7 +16,7 @@ import {
   useToast,
 } from 'native-base'
 
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import { MaterialIcons } from '@expo/vector-icons'
@@ -39,32 +40,16 @@ import * as FileSystem from 'expo-file-system'
 import { AppError } from '@utils/AppError'
 import { api } from '@services/api'
 
-interface A {
-  name: string
-  description: string
-  is_new: string
-  price: string
-  accept_trade: boolean
-  is_active: boolean
-  payment_methods: string[]
-  product_images: {
-    id: string
-    path: string
-  }[]
+interface PaymentProps {
+  key: string
+  method: string
 }
-
-// interface B {
-//   product_images: {
-//     id: string
-//     path: string
-//   }[]
-// }
 
 interface RouteParamsProps {
   product_id: string
 }
 
-const newAdSchema = yup.object({
+const editAdSchema = yup.object({
   name: yup.string().required('Informe o nome do produto.'),
   description: yup.string().required('Informe a descrição do produto.'),
   is_new: yup.string().required('Informe se aceita troca ou não.'),
@@ -75,34 +60,39 @@ const newAdSchema = yup.object({
 
 export function EditAd() {
   const { user } = useAuth()
-
-  const [product, setProduct] = useState<ProductDTO>({} as ProductDTO)
   const [productImages, setProductImages] = useState<any[]>([])
-
-  const route = useRoute()
-  const toast = useToast()
-  const navigation = useNavigation<AppNavigatorRoutesProps>()
-
-  const { product_id } = route.params as RouteParamsProps
 
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
-  } = useForm<A>({
-    resolver: yupResolver(newAdSchema),
+  } = useForm<ProductDTO>({
+    resolver: yupResolver(editAdSchema),
+    defaultValues: {
+      is_new: '',
+      payment_methods: [],
+    },
   })
+
+  const toast = useToast()
+
+  const route = useRoute()
+  const navigation = useNavigation<AppNavigatorRoutesProps>()
+
+  const { product_id } = route.params as RouteParamsProps
 
   async function loadProduct() {
     try {
       const { data } = await api.get(`/products/${product_id}`)
-      const dataFormatted = {
+      const product = {
         ...data,
         is_new: String(data.is_new),
-        price: String(data.price),
+        price: String(data.price / 100),
+        payment_methods: data.payment_methods.map((payment: PaymentProps) => payment.key),
       }
 
-      setProduct(dataFormatted)
+      reset(product)
       setProductImages(data.product_images)
     } catch (error) {
       const isAppError = error instanceof AppError
@@ -163,26 +153,73 @@ export function EditAd() {
     }
   }
 
-  function handlePreviewAd(product: ProductDTO) {
-    const images = productImages
+  async function handleUpdateProduct(productUpdated: ProductDTO) {
+    try {
+      const images = productImages
 
-    navigation.navigate('PreviewAd', { product, images })
+      await api.put(`/products/${product_id}`, {
+        name: productUpdated.name,
+        description: productUpdated.description,
+        is_new: productUpdated.is_new === 'true' ? true : false,
+        accept_trade: productUpdated.accept_trade,
+        payment_methods: productUpdated.payment_methods,
+        price: Number(productUpdated.price) * 100,
+        product_images: images,
+      })
+
+      images.map(async (image) => {
+        if (image.uri) {
+          const dataForm = new FormData()
+          dataForm.append('product_id', product_id)
+          dataForm.append('images', image)
+
+          await api.post('/products/images', dataForm, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+        }
+      })
+
+      navigation.navigate('MyAd')
+    } catch (error) {
+      const isAppError = error instanceof AppError
+      const title = isAppError ? error.message : 'Não foi atualizar o produto. Tente novamente mais tarde.'
+
+      toast.show({
+        title,
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    }
   }
 
-  function handleRemoveProductImage(path: string) {
-    const imageDeleted: any = productImages.filter((image) => image.path !== path)
-    setProductImages(imageDeleted)
+  async function handleRemoveProductImage(id: string, uri: string) {
+    try {
+      if (id) {
+        const updatedImages = productImages.filter((image) => image.id !== id)
+        setProductImages(updatedImages)
+        await api.delete('/products/images', {
+          data: {
+            productImagesIds: [id],
+          },
+        })
+      }
+
+      const updatedImages = productImages.filter((image) => image.uri !== uri)
+      setProductImages(updatedImages)
+    } catch (error: any) {
+      console.log(error)
+    }
   }
 
   function handleBack() {
     navigation.goBack()
   }
 
-  useFocusEffect(
-    useCallback(() => {
-      loadProduct()
-    }, [product_id]),
-  )
+  useEffect(() => {
+    loadProduct()
+  }, [reset, product_id])
 
   return (
     <VStack pt={9} bg="gray.600" flex={1}>
@@ -210,8 +247,11 @@ export function EditAd() {
             {productImages.map((image, index) => (
               <ImageProduct
                 key={index}
-                source={{ uri: image.uri || `${api.defaults.baseURL}/images/${image.path}` }}
-                onRemove={() => handleRemoveProductImage(image.path)}
+                source={
+                  image.id ? { uri: `${api.defaults.baseURL}/images/${image.path}` } : { uri: image.uri }
+                }
+                // source={image}
+                onRemove={() => handleRemoveProductImage(image.id, image.uri)}
               />
             ))}
 
@@ -244,7 +284,6 @@ export function EditAd() {
                 mt={4}
                 onChangeText={onChange}
                 value={value}
-                defaultValue={product.name}
                 errorMessage={errors.name?.message}
               />
             )}
@@ -254,12 +293,7 @@ export function EditAd() {
             name="description"
             control={control}
             render={({ field: { onChange, value } }) => (
-              <TextArea
-                onChangeText={onChange}
-                value={value}
-                defaultValue={product.description}
-                errorMessage={errors.description?.message}
-              />
+              <TextArea onChangeText={onChange} value={value} errorMessage={errors.description?.message} />
             )}
           />
 
@@ -296,7 +330,6 @@ export function EditAd() {
               <Input
                 onChangeText={onChange}
                 value={value}
-                defaultValue={product.price}
                 keyboardType="numeric"
                 placeholder="Valor do produto"
                 InputLeftElement={
@@ -348,7 +381,7 @@ export function EditAd() {
             bg="gray.100"
             title="Avançar"
             w={36}
-            onPress={handleSubmit(handlePreviewAd)}
+            onPress={handleSubmit(handleUpdateProduct)}
           />
         </HStack>
       </ScrollView>

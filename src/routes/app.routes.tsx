@@ -24,7 +24,7 @@ type AppRoutesProps = {
   CreateAd: undefined
   EditAd: { product_id: string }
   MyAd: undefined
-  AdDetails: undefined
+  AdDetails: { product_id: string }
   MyAdDetails: { product_id: string }
   PreviewAd: { product: ProductDTO; images: any[] }
   Logout: undefined

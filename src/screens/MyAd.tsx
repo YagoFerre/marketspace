@@ -125,6 +125,11 @@ export function MyAd() {
             columnWrapperStyle={{ justifyContent: 'space-between' }}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <MyAdCard data={item} onPress={() => handleMyAdDetails(item.id)} />}
+            ListEmptyComponent={
+              <Text color="gray.200" fontFamily="bold" fontSize="sm" textAlign="center" mt="1/2">
+                Você não tem nenhum anúncio.
+              </Text>
+            }
           />
         </VStack>
       )}

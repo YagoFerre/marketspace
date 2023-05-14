@@ -1,20 +1,32 @@
-import { useState } from 'react'
-import { Divider, HStack, Heading, IModalProps, Modal as NativeBaseModal, Text } from 'native-base'
 import { Switch } from 'react-native'
+import { Divider, HStack, Heading, IModalProps, Modal as NativeBaseModal, Text } from 'native-base'
 
 import { Tag } from './Tag'
 import { CheckedGroup } from './CheckedGroup'
 import { Button } from './Button'
 
-export function Modal({ ...rest }: IModalProps) {
-  const [isChecked, setIsChecked] = useState(false)
-  const [isNew, setIsNew] = useState<boolean>()
-  const [paymentMethod, setPaymentMethod] = useState<string[]>([])
+interface Props extends IModalProps {
+  acceptTrade: boolean | undefined
+  isNew: boolean | undefined
+  paymentMethods: string[] | undefined
+  onAcceptTradeChange: (value: boolean | undefined) => void
+  onIsNewChange: (value: boolean | undefined) => void
+  onPaymentMethodsChange: (value: string[]) => void
+}
 
+export function Modal({
+  acceptTrade,
+  isNew,
+  paymentMethods,
+  onAcceptTradeChange,
+  onIsNewChange,
+  onPaymentMethodsChange,
+  ...rest
+}: Props) {
   function handleResetAllFilters() {
-    setIsChecked(false)
-    setIsNew(undefined)
-    setPaymentMethod([])
+    onAcceptTradeChange(false)
+    onIsNewChange(undefined)
+    onPaymentMethodsChange([])
   }
 
   return (
@@ -35,8 +47,8 @@ export function Modal({ ...rest }: IModalProps) {
           </Text>
 
           <HStack alignItems="center">
-            <Tag mr={2} title="novo" onPress={() => setIsNew(true)} isActive={isNew === true} />
-            <Tag title="usado" onPress={() => setIsNew(false)} isActive={isNew === false} />
+            <Tag mr={2} title="novo" onPress={() => onIsNewChange(true)} isActive={isNew === true} />
+            <Tag title="usado" onPress={() => onIsNewChange(false)} isActive={isNew === false} />
           </HStack>
 
           <Text color="gray.200" fontFamily="bold" fontSize="sm" mt={6} mb={3}>
@@ -44,15 +56,19 @@ export function Modal({ ...rest }: IModalProps) {
           </Text>
           <Switch
             trackColor={{ true: '#647ac7', false: '' }}
-            value={isChecked}
-            onValueChange={() => setIsChecked(!isChecked)}
+            value={acceptTrade}
+            onValueChange={() => onAcceptTradeChange(!acceptTrade)}
           />
 
           <Text color="gray.200" fontFamily="bold" fontSize="sm" mt={6}>
             Meios de pagamento aceitos
           </Text>
 
-          <CheckedGroup value={paymentMethod} defaultValue={paymentMethod} onChange={setPaymentMethod} />
+          <CheckedGroup
+            value={paymentMethods}
+            defaultValue={paymentMethods}
+            onChange={onPaymentMethodsChange}
+          />
           <HStack alignItems="center" justifyContent="space-between" mt={12}>
             <Button title="Resetar filtros" w="45%" onPress={handleResetAllFilters} />
             <Button bg="gray.100" variant="tertiary" title="Aplicar filtros" w="45%" />

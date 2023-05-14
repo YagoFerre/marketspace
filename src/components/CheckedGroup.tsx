@@ -1,5 +1,5 @@
-import { Checkbox, ICheckboxGroupProps } from 'native-base'
 import { LogBox } from 'react-native'
+import { Checkbox, ICheckboxGroupProps } from 'native-base'
 
 export function CheckedGroup({ ...rest }: ICheckboxGroupProps) {
   LogBox.ignoreLogs([

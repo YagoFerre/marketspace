@@ -17,5 +17,6 @@ export interface ProductDetailsDTO {
   user: {
     avatar: string
     name: string
+    tel: string
   }
 }
